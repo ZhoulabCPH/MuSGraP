@@ -1,18 +1,20 @@
 # MuSGraP
+
 MuSGraP (Multi-Scale Graph Prognosticator) is a weakly supervised deep learning framework that fuses local topological patterns captured by dynamic graph convolution with global contextual interactions modeled by transformer self-attention to enable annotation-free, robust postoperative progression risk stratification in limited-stage small cell lung cancer from H&E-stained whole-slide images.
 
 <p align="center">
   <img src="assets/graphical_abstract.png" alt="MuSGraP graphical abstract" width="1000">
 </p>
 
-The repository covers three major stages:
+## Overview
 
-1. `01_data_processing`: whole-slide tiling, foundation-model feature extraction, tile quality control.
-2. `02_model_development`: MuSGraP training, MuSGraP eval, interpretability.
-3. `03_downstream_analysis`: time-dependent ROC analysis, C-index, multivariable Cox regression, and survival analysis.
+The repository is organized into three major stages:
+
+1. **`01_data_processing`** – Whole-slide tiling, foundation-model feature extraction, and tile quality control.
+2. **`02_model_development`** – MuSGraP training, evaluation, and interpretability analysis.
+3. **`03_downstream_analysis`** – Time-dependent ROC analysis, C-index computation, multivariable Cox regression, and survival analysis.
 
 The codebase is structured as a modular research workflow rather than a monolithic package, with most scripts exposing command-line interfaces for both single-slide and batch processing.
-
 
 ## Repository Layout
 
@@ -64,35 +66,109 @@ MuSGraP/
 `-- README.md
 ```
 
-## Important Note
+> **Note:** The `datasets/` and `Log/` directories are auxiliary local resources used during development and debugging. They are not required for the public workflow and should not be treated as mandatory inputs.
 
-The `datasets/` and `Log/` directories in this development snapshot are auxiliary local resources that were used for development, debugging, and testing. They are not required as part of the formal public workflow and should not be treated as mandatory inputs for external users.
+## System Requirements
 
-## Environment
+### Hardware
 
-The pipeline is designed for Python 3.10+ and uses common scientific-computing libraries. Depending on the workflow stage, typical dependencies include:
+- GPU: Tesla V100-PCIE-32GB (or equivalent)
+
+### Operating System
+
+This package has been tested on the following systems:
+
+- Linux 3.10.0-957.el7.x86_64 (recommended)
+- Windows 11 x64
+
+## Installation
+
+> The estimated installation time is approximately 1 hour, depending on network conditions.
+
+1. Install [Anaconda3](https://www.anaconda.com/download).
+2. Install CUDA 10.x and cuDNN.
+3. Create a conda environment and install the Python dependencies:
+
+```bash
+conda create -n musgrasp python=3.10 -y
+conda activate musgrasp
+pip install -r requirements.txt
+```
+
+### Python Dependencies
 
 - `torch`
-- `pandas`
-- `numpy`
-- `pyarrow`
-- `anndata`
-- `scanpy`
+- `pandas`, `numpy`, `pyarrow`
+- `anndata`, `scanpy`
 - `scikit-learn`
 - `matplotlib`
-- `gseapy`
-- `tangram`
+- `gseapy`, `tangram`
 - `pyyaml`
 - `openslide-python`
 
-Two preprocessing scripts are written in R:
-- `01_data_processing/cindex_nomogram_analysis.R`
-- `01_data_processing/km_and_rate_charts.R`
-- `01_data_processing/metastasis_forest_plot.R`
-- `01_data_processing/time_roc_analysis.R`
-- `01_data_processing/timedep_auc_comparison.R`
-These require an R environment with the relevant proteomics and enrichment-analysis packages installed.
+### R Dependencies
+
+The following downstream analysis scripts require R:
+
+- `03_downstream_analysis/cindex_nomogram_analysis.R`
+- `03_downstream_analysis/km_and_rate_charts.R`
+- `03_downstream_analysis/metastasis_forest_plot.R`
+- `03_downstream_analysis/time_roc_analysis.R`
+- `03_downstream_analysis/timedep_auc_comparison.R`
+
+## Usage
+
+### Step 1 – H&E Tile Segmentation
+
+Convert SVS files to PNG format and apply the watershed algorithm to generate binary masks. The whole-slide image is divided into 224 × 224 tiles, retaining only those with ≥ 60% tissue content.
+
+```bash
+python ./01_data_processing/Patch\ segmentation.py
+```
+
+### Step 2 – Quality Control
+
+```bash
+python ./01_data_processing/Quality\ control.py
+```
+
+### Step 3 – Feature Extraction
+
+Before running feature extraction, organize patch images as one subdirectory per slide. Patch filenames should encode slide identity and spatial coordinates:
+
+```text
+dataset/
+`-- patches/
+    |-- slide_A/
+    |   |-- slide_A_(23.0,17.0).jpg
+    |   |-- slide_A_(23.0,18.0).jpg
+    |   `-- ...
+    `-- slide_B/
+```
+
+Extract foundation-model features (one feature table per slide):
+
+```bash
+python ./01_data_processing/Get_foundation_model_features.py
+```
+
+### Step 4 – Model Training & Evaluation
+
+```bash
+# Training
+python ./02_model_development/train_survival.py
+
+# Evaluation
+python ./02_model_development/eval_survival.py
+```
+
+### Step 5 – Interpretability
+
+```bash
+python ./02_model_development/interpretability.py
+```
 
 ## Citation
 
 If you use MuSGraP in academic work, please cite the associated study once the manuscript or preprint is publicly available.
+
